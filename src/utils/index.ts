@@ -30,19 +30,11 @@ export function getTouchPosition(e: MouseEvent | TouchEvent) {
   }
 }
 
-// 加载JS文件
-export function loadScript(id: string, url: string) {
-  return new Promise((resolve, reject) => {
-    if (document.getElementById(id)) {
-      resolve(undefined)
-      return
-    }
-
-    const script = document.createElement('script')
-    script.id = id
-    script.src = url
-    script.onload = resolve
-    script.onerror = reject
-    document.body.appendChild(script)
-  })
+// 传入 svg 源码字符串，转成 base64
+// getBase64BySvg('<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="36" fill="red" /></svg>')
+export function getBase64BySvg(svgStr: string) {
+  if (!svgStr.includes('xmlns="http://www.w3.org/2000/svg"')) {
+    svgStr = svgStr.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')
+  }
+  return `data:image/svg+xml;charset=utf-8;base64,${window.btoa(svgStr)}`
 }

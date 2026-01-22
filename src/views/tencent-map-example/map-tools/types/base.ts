@@ -1,0 +1,22 @@
+// 坐标点
+export interface Point {
+  lng: number // 经度 lng较大(116.40447399831032)(x轴)
+  lat: number // 纬度 lat较小(39.93362685019524)(y轴)
+}
+export type PointArray = [number, number]
+// 形似坐标点
+export type PointLike = Point | PointArray | TMap.LatLng | string
+
+// 矩形
+export interface PointRect {
+  lb: Point // 左下角坐标
+  rt: Point // 右上角坐标
+}
+// 线条（由多个点组成）
+export type Paths = Point[]
+// 线段（由2个点组成）
+export type Line = Point[]
+// 区域（由3+个点组成）
+export type Area = Point[]
+// 线段组（由多个线段组成）
+export type Lines = Line[]

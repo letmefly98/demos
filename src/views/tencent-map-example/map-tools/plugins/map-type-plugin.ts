@@ -1,5 +1,3 @@
-import type TMap from 'tmap-gl-types'
-
 // 支持的地图类型
 export const MAP_TYPE_OPTIONS = [
   { value: 'tencent-map', label: '腾讯地图' },

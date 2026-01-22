@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type TMap from 'tmap-gl-types'
-import type { MAP_TYPE } from './libs/use-map-type-plugin'
-import { onMounted, ref, shallowRef, watch } from 'vue'
-import MapComponent from './libs/map-component.vue'
-import useLogParse from './libs/use-log-parse'
-import useMapTypePlugin, { MAP_TYPE_OPTIONS } from './libs/use-map-type-plugin'
+import type { MAP_TYPE } from './map-tools/plugins/map-type-plugin'
+import { ref, watch } from 'vue'
+import { createTileLayer } from './map-tools/layers/tile-layer'
+import useMapTypePlugin, { MAP_TYPE_OPTIONS } from './map-tools/plugins/map-type-plugin'
+import MapComponent from './map-tools/ui/map-component/index.vue'
+import { fitBounds, getMapLevel, getPosition, getRectByScreen, getTileCorner, getTileLevel, getTileRect, getTileSizeById, point2ll } from './map-tools/utils'
 
 defineOptions({
   title: '腾讯地图API演示',
@@ -14,51 +15,99 @@ defineOptions({
 
 // 地图初始化参数
 let mapIns: TMap.Map
-const mapDefaultOptions: TMap.MapOptions = {
-  pitchable: false,
-  rotatable: false,
-  zoom: 13,
-  minZoom: 5,
-  maxZoom: 14,
-}
+let markerLayer: TMap.MultiMarker
 
 // 拓展地图类型功能
-const mapType = ref<MAP_TYPE>('gaode-satellite')
+const mapType = ref<MAP_TYPE>('tencent-map')
 const { initial: initMapTypePlugin, changeType: changeMapType } = useMapTypePlugin({
   defaultType: mapType.value,
 })
 watch(mapType, () => changeMapType(mapIns, mapType.value))
 
-const table = shallowRef([] as any[])
-const { load, parse } = useLogParse()
-
-onMounted(async () => {
-  const publicPath = window.location.pathname
-  const txt = await load(`${publicPath}tmp/export-9358b80c-5a28-416e-9a7e-f4893e8a7cd9.json`)
-  const rows = parse(txt)
-  table.value = rows
-  console.log(rows)
-})
+const markInput = ref('')
+const tileInput = ref('')
+const mapLevel = ref(13)
+const tileLevel = ref(13)
 
 // 地图加载完成，初始化各种拓展
 function handleMapLoaded(map: TMap.Map) {
+  const TMap = window.TMap
   mapIns = map
+
+  const tileLayer = createTileLayer(mapIns, { config: { color: '#ff0000' } })
+  markerLayer = new TMap.MultiMarker({
+    id: 'markerLayer',
+    map: mapIns,
+    zIndex: 1,
+    geometries: [],
+    styles: {},
+  })
 
   // 初始化地图类型
   initMapTypePlugin(mapIns)
+  updateTile()
+
+  mapIns.on('bounds_changed', () => {
+    mapLevel.value = getMapLevel(mapIns)
+    tileLevel.value = getTileLevel(mapIns)
+    updateTile()
+  })
+
+  const beijing = { lat: 39.9069287, lng: 116.3975649 }
+  markerLayer.updateGeometries([{ id: 'mark', styleId: 'mark', position: point2ll(beijing) }])
+
+  function updateTile() {
+    const tileLevel = getTileLevel(mapIns)
+    const bounds = getRectByScreen(mapIns) // 当前视窗
+    tileLayer.redraw(tileLevel, bounds)
+  }
 }
 
-function handleClickTableRow(row: any) {
-  console.log(row)
+function handleMarkInputChange() {
+  if (!markInput.value) {
+    markerLayer.remove(['mark'])
+    return
+  }
+  const p = getPosition(markInput.value)
+  if (!p) return alert('请输入正确的经纬度')
+  const position = point2ll(p)
+  mapIns.setCenter(position)
+  markerLayer.updateGeometries([{ id: 'mark', styleId: 'mark', position }])
+}
+
+function handleTileInputChange() {
+  if (!tileInput.value) return
+  const tid = Number(tileInput.value)
+  if (Number.isNaN(tid)) return
+  const dist = getTileSizeById(tid)
+  const lb = getTileCorner(tid)
+  const paths = getTileRect(lb, dist)
+  fitBounds(mapIns, paths)
 }
 </script>
 
 <template>
   <div class="tencent-map-api">
     <div class="map-container">
-      <MapComponent :options="mapDefaultOptions" @loaded="handleMapLoaded" />
+      <MapComponent @loaded="handleMapLoaded" />
     </div>
     <div class="controls">
+      <div class="control-item">
+        <div class="title">
+          <span>地图级别</span>
+        </div>
+        <div class="content">
+          {{ mapLevel }}
+        </div>
+      </div>
+      <div class="control-item">
+        <div class="title">
+          <span>地图Tile级别</span>
+        </div>
+        <div class="content">
+          {{ tileLevel }}
+        </div>
+      </div>
       <div class="control-item">
         <div class="title">
           <span>地图类型</span>
@@ -75,27 +124,11 @@ function handleClickTableRow(row: any) {
       </div>
       <div class="control-item">
         <div class="title">
-          <span>日志</span>
+          <span>快速定位</span>
         </div>
         <div class="content">
-          <table>
-            <tbody>
-              <tr>
-                <th>请求发起时间</th>
-                <th>操作</th>
-              </tr>
-              <template v-for="(row, i) in table" :key="i">
-                <tr>
-                  <td>{{ row.request.startTime }}</td>
-                  <td>
-                    <button @click="handleClickTableRow(row)">
-                      查看
-                    </button>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
+          <input v-model="markInput" placeholder="请输入经纬度" @blur="handleMarkInputChange" />
+          <input v-model="tileInput" placeholder="请输入TileId" @blur="handleTileInputChange" />
         </div>
       </div>
     </div>
