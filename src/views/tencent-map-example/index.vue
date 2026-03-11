@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type TMap from 'tmap-gl-types'
+import type { RadiusGeometry } from './map-tools/overlay/radius-overlay/types'
 import type { MAP_TYPE } from './map-tools/plugins/map-type-plugin'
 import { ref, watch } from 'vue'
 import { createTileLayer } from './map-tools/layers/tile-layer'
+import RadiusOverlay from './map-tools/overlay/radius-overlay/index.vue'
 import useMapTypePlugin, { MAP_TYPE_OPTIONS } from './map-tools/plugins/map-type-plugin'
 import MapComponent from './map-tools/ui/map-component/index.vue'
 import { fitBounds, getMapLevel, getPosition, getRectByScreen, getTileCorner, getTileLevel, getTileRect, getTileSizeById, point2ll } from './map-tools/utils'
@@ -41,6 +43,21 @@ function handleMapLoaded(map: TMap.Map) {
     zIndex: 1,
     geometries: [],
     styles: {},
+  })
+
+  // 注意 BaseOverlay 必须异步加载，否则 TMap 尚未加载完成
+  import('./map-tools/overlay/base').then(({ default: BaseOverlay }) => {
+    const testLayer = new BaseOverlay<RadiusGeometry>({
+      map,
+      geometries: [
+        { id: '1', data: [12, 24], minRadius: 13, maxRadius: 20, position: new TMap.LatLng(39.917959756096984, 116.38542632937242) },
+        { id: '2', data: [10, 30], minRadius: 20, maxRadius: 40, position: new TMap.LatLng(39.90505738089471, 116.42370285631114) },
+      ],
+      component: RadiusOverlay,
+    })
+    testLayer.on('click', (geo, e) => {
+      console.log(`环形图被点击，位置为`, geo, e)
+    })
   })
 
   // 初始化地图类型
