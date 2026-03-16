@@ -5,6 +5,7 @@ import type { MAP_TYPE } from './map-tools/plugins/map-type-plugin'
 import { ref, watch } from 'vue'
 import { createTileLayer } from './map-tools/layers/tile-layer'
 import RadiusOverlay from './map-tools/overlay/radius-overlay/index.vue'
+import ResizeRectElement from './map-tools/overlay/resize-rect-layer/index.vue'
 import useMapTypePlugin, { MAP_TYPE_OPTIONS } from './map-tools/plugins/map-type-plugin'
 import MapComponent from './map-tools/ui/map-component/index.vue'
 import { fitBounds, getMapLevel, getPosition, getRectByScreen, getTileCorner, getTileLevel, getTileRect, getTileSizeById, point2ll } from './map-tools/utils'
@@ -50,13 +51,34 @@ function handleMapLoaded(map: TMap.Map) {
     const testLayer = new BaseOverlay<RadiusGeometry>({
       map,
       geometries: [
-        { id: '1', data: [12, 24], minRadius: 13, maxRadius: 20, position: new TMap.LatLng(39.917959756096984, 116.38542632937242) },
-        { id: '2', data: [10, 30], minRadius: 20, maxRadius: 40, position: new TMap.LatLng(39.90505738089471, 116.42370285631114) },
+        { data: [12, 24], minRadius: 13, maxRadius: 20, position: new TMap.LatLng(39.917959756096984, 116.38542632937242) },
+        { data: [10, 30], minRadius: 20, maxRadius: 40, position: new TMap.LatLng(39.90505738089471, 116.42370285631114) },
       ],
       component: RadiusOverlay,
     })
     testLayer.on('click', (geo, e) => {
       console.log(`环形图被点击，位置为`, geo, e)
+    })
+    setTimeout(() => {
+      testLayer.setGeometries([{ data: [12, 24], minRadius: 13, maxRadius: 20, position: new TMap.LatLng(39.8995270472936, 116.39332193580412) }])
+    }, 2000)
+  })
+
+  import('./map-tools/overlay/resize-rect-layer/index').then(({ default: ResizeRectOverlay }) => {
+    const resizeRectLayer = new ResizeRectOverlay({
+      map,
+      geometries: [
+        {
+          paths: [
+            new TMap.LatLng(39.917959756096984, 116.38542632937242),
+            new TMap.LatLng(39.90505738089471, 116.42370285631114),
+          ],
+        },
+      ],
+      component: ResizeRectElement,
+    })
+    resizeRectLayer.on('resize', (geo) => {
+      resizeRectLayer.updateGeometries([geo])
     })
   })
 

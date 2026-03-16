@@ -1,20 +1,24 @@
-import type { BaseOverlayContext, BaseOverlayProps } from './types'
+import type { BaseGeometry, BaseOverlayContext, BaseOverlayProps } from './types'
+import { differenceBy } from 'lodash-es'
 import { createApp, defineComponent, h, ref } from 'vue'
+import { uuid } from '../../utils/uuid'
 
-/** 自定义覆盖物基类 - 继承 DOMOverlay，内部挂载 Vue 组件实现自定义渲染 */
-export default class BaseOverlay<G = any> extends TMap.DOMOverlay<HTMLDivElement> {
-  /**
-   * 初始化过程 constructor -> super(onInit -> createDOM -> updateDOM) -> after-constructor
-   * 特别注意：其中 super 阶段的 this 与本类的 this 不同，容易会造成取值异常，所以最好不要直接采用 this 存值而是 getContext()
-   */
+/** 自定义覆盖物基类 - 继承 DOMOverlay */
+export default class BaseOverlay<G extends BaseGeometry> extends TMap.DOMOverlay<HTMLDivElement> {
   constructor(options: BaseOverlayProps<G>) {
     super(options)
   }
 
+  /**
+   * 初始化过程 constructor -> super(onInit -> createDOM -> updateDOM) -> after-constructor
+   * 特别注意：其中 super 阶段的 this 与本类的 this 不同，容易会造成取值异常，所以最好不要直接采用 this 存值而是 getContext()
+   */
+
   /** 初始化 */
   onInit(props: BaseOverlayProps<G>) {
     const context = this.getContext()
-    Object.assign(context, props)
+    Object.assign(context, { ...props })
+    context.geometries = context.geometries.map(this.normalizeGeometry)
     context.renderFlag = ref(0)
   }
 
@@ -57,8 +61,40 @@ export default class BaseOverlay<G = any> extends TMap.DOMOverlay<HTMLDivElement
     context.renderFlag.value += 1
   }
 
-  /** 获取上下文（将 this 作为 context 载体，避免额外对象分配） */
+  /** 获取上下文（避免继承情况下的取值异常） */
   getContext() {
-    return this as unknown as BaseOverlayContext<G>
+    type ThisGeometry = G & Required<BaseGeometry>
+    return this as unknown as BaseOverlayContext<ThisGeometry>
+  }
+
+  /** 结构化单个内容，确保 id 存在 */
+  normalizeGeometry(geometry: G): G & Required<BaseGeometry> {
+    const newGeo = geometry as G & Required<BaseGeometry>
+    if (!newGeo.id) newGeo.id = uuid()
+    return newGeo
+  }
+
+  /** 设置内容 */
+  setGeometries(geometries: G[]) {
+    const context = this.getContext()
+    context.geometries = geometries.map(this.normalizeGeometry)
+    this.updateDOM()
+  }
+
+  /** 更新内容 */
+  updateGeometries(geometries: G[]) {
+    const context = this.getContext()
+    const diff = differenceBy(geometries, context.geometries, 'id')
+    context.geometries = context.geometries.map((geo: any) => {
+      const match = geometries.find((g: any) => g.id === geo.id)
+      return match || geo
+    }).concat(diff).map(this.normalizeGeometry)
+    this.updateDOM()
+  }
+
+  /** 获取内容 */
+  getGeometries() {
+    const context = this.getContext()
+    return context.geometries
   }
 }
