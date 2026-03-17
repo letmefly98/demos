@@ -1,4 +1,5 @@
-import type { BaseGeometry, BaseOverlayContext, BaseOverlayProps } from './types'
+import type { Component } from 'vue'
+import type { BaseGeometry, BaseOverlayContext, BaseOverlayProps, NormalizedGeometry } from './types'
 import { differenceBy } from 'lodash-es'
 import { createApp, defineComponent, h, ref } from 'vue'
 import { uuid } from '../../utils/uuid'
@@ -17,8 +18,8 @@ export default class BaseOverlay<G extends BaseGeometry> extends TMap.DOMOverlay
   /** 初始化 */
   onInit(props: BaseOverlayProps<G>) {
     const context = this.getContext()
-    Object.assign(context, { ...props })
-    context.geometries = context.geometries.map(this.normalizeGeometry)
+    Object.assign(context, props)
+    context.geometries = (context.geometries || []).map(this.normalizeGeometry)
     context.renderFlag = ref(0)
   }
 
@@ -38,18 +39,9 @@ export default class BaseOverlay<G extends BaseGeometry> extends TMap.DOMOverlay
     const dom = document.createElement('div')
     dom.className = 'custom-overlay-wrapper'
 
-    // 使用 defineComponent + setup 返回渲染函数，确保 renderFlag 变化时触发重新渲染
-    const App = defineComponent({
-      setup() {
-        return () => h(context.component, {
-          renderFlag: context.renderFlag.value,
-          context,
-        })
-      },
-    })
+    if (!context.component) return dom
 
-    const app = createApp(App)
-    app.mount(dom)
+    const app = this.createApp(dom, context.component)
     context.app = app
 
     return dom
@@ -61,15 +53,31 @@ export default class BaseOverlay<G extends BaseGeometry> extends TMap.DOMOverlay
     context.renderFlag.value += 1
   }
 
+  createApp(dom: HTMLElement, component: Component) {
+    const context = this.getContext()
+    // 使用 defineComponent + setup 返回渲染函数，确保 renderFlag 变化时触发重新渲染
+    const App = defineComponent({
+      setup() {
+        return () => h(component, {
+          renderFlag: context.renderFlag.value,
+          context,
+        })
+      },
+    })
+    const app = createApp(App)
+    app.mount(dom)
+    context.app = app
+    return app
+  }
+
   /** 获取上下文（避免继承情况下的取值异常） */
   getContext() {
-    type ThisGeometry = G & Required<BaseGeometry>
-    return this as unknown as BaseOverlayContext<ThisGeometry>
+    return this as unknown as BaseOverlayContext<G>
   }
 
   /** 结构化单个内容，确保 id 存在 */
-  normalizeGeometry(geometry: G): G & Required<BaseGeometry> {
-    const newGeo = geometry as G & Required<BaseGeometry>
+  normalizeGeometry(geometry: G): NormalizedGeometry<G> {
+    const newGeo = geometry as NormalizedGeometry<G>
     if (!newGeo.id) newGeo.id = uuid()
     return newGeo
   }
@@ -81,14 +89,14 @@ export default class BaseOverlay<G extends BaseGeometry> extends TMap.DOMOverlay
     this.updateDOM()
   }
 
-  /** 更新内容 */
+  /** 更新内容（合并已有数据，新增不存在的） */
   updateGeometries(geometries: G[]) {
     const context = this.getContext()
     const diff = differenceBy(geometries, context.geometries, 'id')
-    context.geometries = context.geometries.map((geo: any) => {
-      const match = geometries.find((g: any) => g.id === geo.id)
-      return match || geo
-    }).concat(diff).map(this.normalizeGeometry)
+    context.geometries = context.geometries.map((geo) => {
+      const match = geometries.find(g => g.id === geo.id)
+      return match ? this.normalizeGeometry(match) : geo
+    }).concat(diff.map(this.normalizeGeometry))
     this.updateDOM()
   }
 

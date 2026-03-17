@@ -1,18 +1,18 @@
 <script setup lang="ts" name="RadiusOverlay">
-import type { BaseOverlayInject } from '../base/types'
+import type { BaseOverlayContext } from '../base/types'
 import type { RadiusGeometry } from './types'
 import { useTemplateRef, watch } from 'vue'
 import Radius from './biz/radius.vue'
 
 interface Props {
   renderFlag?: number
-  context: BaseOverlayInject<RadiusGeometry>
+  context: BaseOverlayContext<RadiusGeometry>
 }
 const props = withDefaults(defineProps<Props>(), {})
 const domRefs = useTemplateRef<HTMLDivElement[]>('geo')
 
 // 地图视窗触发变化
-watch(() => props.renderFlag, () => requestAnimationFrame(updateDOM))
+watch(() => props.renderFlag, () => requestAnimationFrame(updateDOM), { immediate: true })
 
 // 地图视窗变化时，更新 DOM 位置
 function updateDOM() {

@@ -4,8 +4,7 @@ import type { RadiusGeometry } from './map-tools/overlay/radius-overlay/types'
 import type { MAP_TYPE } from './map-tools/plugins/map-type-plugin'
 import { ref, watch } from 'vue'
 import { createTileLayer } from './map-tools/layers/tile-layer'
-import RadiusOverlay from './map-tools/overlay/radius-overlay/index.vue'
-import ResizeRectElement from './map-tools/overlay/resize-rect-layer/index.vue'
+import RadiusOverlay from './map-tools/overlay/radius-overlay/ui.vue'
 import useMapTypePlugin, { MAP_TYPE_OPTIONS } from './map-tools/plugins/map-type-plugin'
 import MapComponent from './map-tools/ui/map-component/index.vue'
 import { fitBounds, getMapLevel, getPosition, getRectByScreen, getTileCorner, getTileLevel, getTileRect, getTileSizeById, point2ll } from './map-tools/utils'
@@ -64,7 +63,7 @@ function handleMapLoaded(map: TMap.Map) {
     }, 2000)
   })
 
-  import('./map-tools/overlay/resize-rect-layer/index').then(({ default: ResizeRectOverlay }) => {
+  import('./map-tools/overlay/resize-rect-overlay/index').then(({ default: ResizeRectOverlay }) => {
     const resizeRectLayer = new ResizeRectOverlay({
       map,
       geometries: [
@@ -75,7 +74,6 @@ function handleMapLoaded(map: TMap.Map) {
           ],
         },
       ],
-      component: ResizeRectElement,
     })
     resizeRectLayer.on('resize', (geo) => {
       resizeRectLayer.updateGeometries([geo])

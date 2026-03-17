@@ -1,21 +1,7 @@
 <script setup lang="ts">
+import type { Corner, Delta } from '../../../types/delta'
 import { computed, shallowRef } from 'vue'
 import { computeDragDelta } from '../../../utils/format-delta'
-
-/** 四个角的类型 */
-type Corner = 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight'
-
-/** 拖拽像素增量：左/上/右/下四条边各自的偏移量 */
-interface DragDelta {
-  /** 左边界向左移动的像素（正值=向左扩展） */
-  left: number
-  /** 上边界向上移动的像素（正值=向上扩展） */
-  top: number
-  /** 右边界向右移动的像素（正值=向右扩展） */
-  right: number
-  /** 下边界向下移动的像素（正值=向下扩展） */
-  bottom: number
-}
 
 interface Props {
   /** 容器像素宽度（px） */
@@ -38,7 +24,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   /** 拖拽结束时透出四条边各自的像素增量 */
-  (e: 'resize', delta: DragDelta): void
+  (e: 'resize', delta: Delta): void
 }>()
 
 defineSlots<{
@@ -56,7 +42,7 @@ defineSlots<{
 const isDragging = shallowRef(false)
 
 /** 拖拽过程中四条边各自的像素偏移量 */
-const dragDelta = shallowRef<DragDelta>({ left: 0, top: 0, right: 0, bottom: 0 })
+const dragDelta = shallowRef<Delta>({ left: 0, top: 0, right: 0, bottom: 0 })
 
 /** 矩形显示样式 —— 拖拽时实时反映变化 */
 const rectStyle = computed(() => {

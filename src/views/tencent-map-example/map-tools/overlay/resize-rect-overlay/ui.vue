@@ -1,5 +1,6 @@
 <script setup lang="ts" name="ResizeRectOverlay">
-import type { BaseOverlayInject } from '../base/types'
+import type { Delta } from '../../types/delta'
+import type { BaseOverlayContext } from '../base/types'
 import type { ResizeRectGeometry } from './types'
 import { shallowRef, useTemplateRef, watch } from 'vue'
 import { getRectByPath, point2ll } from '../../utils'
@@ -14,7 +15,7 @@ interface ScreenRect {
 
 interface Props {
   renderFlag?: number
-  context: BaseOverlayInject<ResizeRectGeometry>
+  context: BaseOverlayContext<ResizeRectGeometry>
 }
 const props = withDefaults(defineProps<Props>(), {})
 const domRefs = useTemplateRef<HTMLDivElement[]>('geo')
@@ -63,7 +64,7 @@ function updateDOM() {
  */
 function handleResize(
   geo: ResizeRectGeometry,
-  dragDelta: { left: number, top: number, right: number, bottom: number },
+  dragDelta: Delta,
 ) {
   const { map } = props.context
   const { lb, rt } = getRectByPath(geo.paths)
@@ -89,7 +90,7 @@ function handleResize(
         :color="geo.color"
         :border="geo.border"
         :border-color="geo.borderColor"
-        @resize="(delta: any) => handleResize(geo, delta)"
+        @resize="(delta: Delta) => handleResize(geo, delta)"
       >
         <template #bottom-left>
           <input />
